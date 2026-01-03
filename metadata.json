@@ -1,0 +1,7 @@
+{
+  "name": "CorgiLife: AI Virtual Pet",
+  "description": "Adopt and raise a virtual Corgi. Use the power of Gemini AI to translate barks, play together, and see your pet grow in this immersive virtual pet experience.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
