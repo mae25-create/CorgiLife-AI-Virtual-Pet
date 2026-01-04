@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { PetState, CorgiMessage, Activity } from './types';
 import { INITIAL_STATE, ACTIVITIES, MAX_STAT, XP_PER_LEVEL, BREEDS, COLORS } from './constants';
 import StatusBar from './components/StatusBar';
@@ -17,8 +17,15 @@ const App: React.FC = () => {
   const [petImage, setPetImage] = useState<string>('');
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Bonding clock update
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Adoption trigger
   useEffect(() => {
@@ -30,7 +37,7 @@ const App: React.FC = () => {
       }]);
       triggerNewImage('excitedly greeting its new owner');
     }
-  }, [pet.isAdopted]);
+  }, [pet.isAdopted, pet.name, messages.length]);
 
   // Persist state
   useEffect(() => {
@@ -49,14 +56,15 @@ const App: React.FC = () => {
       setPet(prev => {
         if (prev.isSleeping) {
           const newEnergy = Math.min(MAX_STAT, prev.energy + 8);
+          
           return {
             ...prev,
             energy: newEnergy,
             hunger: Math.max(0, prev.hunger - 0.4),
-            // Wake up if fully rested
             isSleeping: newEnergy >= MAX_STAT ? false : true
           };
         }
+
         return {
           ...prev,
           hunger: Math.max(0, prev.hunger - 0.25),
@@ -67,7 +75,7 @@ const App: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [pet.isAdopted]);
+  }, [pet.isAdopted, pet.isSleeping]);
 
   const handleAdopt = () => {
     if (!pet.name.trim()) return;
@@ -83,7 +91,6 @@ const App: React.FC = () => {
       xp: pet.xp + activity.xpGain
     };
 
-    // Level up logic: 1 level = 1 month
     if (updatedPet.xp >= XP_PER_LEVEL) {
       updatedPet.level += 1;
       updatedPet.ageMonths += 1;
@@ -95,7 +102,6 @@ const App: React.FC = () => {
 
     setPet(updatedPet);
 
-    // AI Response
     setIsTyping(true);
     const aiResp = await generateCorgiResponse(`I just ${activity.name.toLowerCase()} with you!`, updatedPet, []);
     setIsTyping(false);
@@ -107,7 +113,6 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
-    // Random image generation for significant actions
     if (Math.random() > 0.6) {
       triggerNewImage(activity.name.toLowerCase());
     }
@@ -139,30 +144,32 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
-    // Small happiness boost for talking
     setPet(prev => ({ ...prev, happiness: Math.min(MAX_STAT, prev.happiness + 2) }));
   };
 
   const toggleSleep = () => {
-    setPet(prev => ({ ...prev, isSleeping: !prev.isSleeping }));
-    if (!pet.isSleeping) {
+    const nextSleeping = !pet.isSleeping;
+    setPet(prev => ({ ...prev, isSleeping: nextSleeping }));
+    if (nextSleeping) {
       triggerNewImage('sleeping peacefully in a cozy bed');
     } else {
       triggerNewImage('waking up and stretching');
     }
   };
 
-  const getBondedTime = () => {
-    const diff = Date.now() - pet.adoptedAt;
+  const bondedTime = useMemo(() => {
+    const diff = currentTime - pet.adoptedAt;
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days > 0) return `${days} Day${days > 1 ? 's' : ''}`;
-    if (hours > 0) return `${hours} Hour${hours > 1 ? 's' : ''}`;
-    if (minutes > 0) return `${minutes} Min${minutes > 1 ? 's' : ''}`;
+    const pluralize = (val: number, unit: string) => `${val} ${unit}${val === 1 ? '' : 's'}`;
+
+    if (days >= 1) return pluralize(days, 'Day');
+    if (hours >= 1) return pluralize(hours, 'Hour');
+    if (minutes >= 1) return pluralize(minutes, 'Minute');
     return "Just Now";
-  };
+  }, [currentTime, pet.adoptedAt]);
 
   if (!pet.isAdopted) {
     return (
@@ -245,10 +252,8 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-[#fdf6e3] p-4 md:p-10 relative overflow-x-hidden">
-      {/* Decorative paw print texture background */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paws.png')]"></div>
 
-      {/* Header Info */}
       <header className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center gap-6 mb-12 relative z-10">
         <div className="text-center md:text-left">
           <h1 className="text-5xl font-brand text-orange-600 drop-shadow-sm flex items-center gap-3 justify-center md:justify-start">
@@ -258,34 +263,32 @@ const App: React.FC = () => {
             {pet.ageMonths} Month Old {pet.breed} • <span className="text-orange-400">{pet.color}</span>
           </p>
         </div>
-        
-        <div className="bg-white px-6 py-4 rounded-[2rem] shadow-xl border-4 border-orange-100 flex items-center gap-5 transform hover:scale-105 transition-transform">
-          <div className="text-4xl">🏅</div>
-          <div>
-            <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Level</div>
-            <div className="text-3xl font-brand text-orange-500 leading-none">{pet.level}</div>
-          </div>
-          <div className="h-12 w-1 bg-stone-100 rounded-full mx-1"></div>
-          <div className="flex-1 min-w-[120px]">
-            <div className="flex justify-between items-end mb-2 text-xs font-black text-stone-400">
-              XP {pet.xp}/{XP_PER_LEVEL}
+
+        <div className="flex items-center gap-4">
+          <div className="bg-white px-6 py-4 rounded-[2rem] shadow-xl border-4 border-orange-100 flex items-center gap-5 transform hover:scale-105 transition-transform">
+            <div className="text-4xl">🏅</div>
+            <div>
+              <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Level</div>
+              <div className="text-3xl font-brand text-orange-500 leading-none">{pet.level}</div>
             </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-              <div 
-                className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full" 
-                style={{ width: `${(pet.xp / XP_PER_LEVEL) * 100}%` }}
-              ></div>
+            <div className="h-12 w-1 bg-stone-100 rounded-full mx-1"></div>
+            <div className="flex-1 min-w-[120px]">
+              <div className="flex justify-between items-end mb-2 text-xs font-black text-stone-400">
+                XP {pet.xp}/{XP_PER_LEVEL}
+              </div>
+              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                <div 
+                  className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full" 
+                  style={{ width: `${(pet.xp / XP_PER_LEVEL) * 100}%` }}
+                ></div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative z-10">
-        
-        {/* Left Column: Pet Visual & Stats */}
         <div className="space-y-10">
-          
-          {/* Main Visualizer */}
           <div className="relative group overflow-hidden rounded-[4rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-[16px] border-white aspect-square flex items-center justify-center">
              {isGeneratingImage && (
                <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center">
@@ -313,17 +316,15 @@ const App: React.FC = () => {
              )}
           </div>
 
-          {/* Vital Signs Card */}
           <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 border-4 border-orange-50">
             <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">🩺 Vital Signs</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <StatusBar label="Hunger" value={pet.hunger} color="bg-amber-400" icon="🥩" />
+              <StatusBar label="Hunger" value={pet.hunger} color="bg-amber-400" icon="🥣" />
               <StatusBar label="Mood" value={pet.happiness} color="bg-pink-400" icon="💖" />
               <StatusBar label="Energy" value={pet.energy} color="bg-cyan-400" icon="⚡" />
             </div>
           </div>
 
-          {/* Activities Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {ACTIVITIES.map(act => (
               <button 
@@ -354,9 +355,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: AI Bark Translator */}
         <div className="bg-white rounded-[4rem] shadow-2xl flex flex-col h-[700px] lg:h-[950px] border-8 border-orange-50 overflow-hidden relative">
-          
           <div className="p-8 border-b-4 border-orange-50 bg-orange-50/20 flex items-center gap-6">
             <div className="w-20 h-20 rounded-3xl bg-orange-300 flex items-center justify-center text-5xl">🐕</div>
             <div>
@@ -417,7 +416,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Footer Info */}
       <footer className="mt-20 w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-6 pb-20 relative z-10">
          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">🎂</span>
@@ -432,7 +430,7 @@ const App: React.FC = () => {
          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">🏡</span>
             <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Bonded</span>
-            <p className="font-brand text-2xl text-stone-700">{getBondedTime()}</p>
+            <p className="font-brand text-2xl text-stone-700">{bondedTime}</p>
          </div>
          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">✨</span>

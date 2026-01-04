@@ -1,7 +1,5 @@
 {
-  "requestFramePermissions": [
-    "camera"
-  ],
+  "requestFramePermissions": [],
   "name": "CorgiLife",
-  "description": ""
+  "description": "An AI-powered virtual pet experience where you raise and bond with a unique corgi companion."
 }

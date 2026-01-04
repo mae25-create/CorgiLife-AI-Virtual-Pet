@@ -1,4 +1,5 @@
 
+// Types for the pet simulation state and messaging
 export interface PetState {
   name: string;
   breed: string;

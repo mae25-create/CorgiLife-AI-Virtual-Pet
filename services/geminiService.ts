@@ -2,37 +2,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { PetState } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Always use named parameter for apiKey and source from process.env.API_KEY.
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-export const generateCorgiResponse = async (
-  userInput: string,
-  petState: PetState,
-  history: { role: 'user' | 'model', parts: { text: string }[] }[]
-) => {
-  const model = "gemini-3-flash-preview";
-  
-  const ageDescription = petState.ageMonths < 6 ? "tiny puppy" : petState.ageMonths < 12 ? "growing puppy" : "adult dog";
-
-  const systemInstruction = `
-    You are the consciousness of a ${petState.breed} named ${petState.name}.
-    Appearance: ${petState.color} coat.
-    Current Age: ${petState.ageMonths} months old (${ageDescription}).
-    Current state: Hunger ${petState.hunger}/100, Happiness ${petState.happiness}/100, Energy ${petState.energy}/100.
-    
-    Rules:
-    1. Respond primarily in "Corgi barks" (e.g., "Woof! Arf!", "Bork bork!", "Awooo!").
-    2. Provide a "Human Translation" of your thoughts in brackets.
-    3. Keep translations funny, cute, and dog-centric. 
-    4. Mention how your current age (${petState.ageMonths} months) affects your energy or curiosity.
-    5. Always return as a JSON object with: 
-       - "barks": The bark sequence.
-       - "translation": The cute human translation.
-       - "mood": One of ['happy', 'sad', 'sleepy', 'hungry', 'playful'].
-  `;
+/**
+ * Generates a response from the Corgi based on user interaction.
+ * Uses gemini-3-flash-preview for text-based reasoning and JSON output.
+ */
+export const generateCorgiResponse = async (userInput: string, pet: PetState, history: any[] = []) => {
+  const ai = getAI();
+  const ageDesc = pet.ageMonths < 6 ? "puppy" : pet.ageMonths < 12 ? "young dog" : "adult";
+  const systemInstruction = `You are a ${pet.breed} named ${pet.name}. Current age: ${pet.ageMonths} months (${ageDesc}). Mood: ${pet.happiness > 70 ? 'joyful' : 'neutral'}. Return JSON: { "barks": "Bark string", "translation": "Funny dog thought", "mood": "happy|sad|sleepy|hungry|playful" }.`;
 
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: "gemini-3-flash-preview",
       contents: [{ role: 'user', parts: [{ text: userInput }] }],
       config: {
         systemInstruction,
@@ -48,51 +32,44 @@ export const generateCorgiResponse = async (
         }
       }
     });
-
-    return JSON.parse(response.text);
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    return {
-      barks: "Woof...",
-      translation: "I'm a bit confused, but I still love you!",
-      mood: "happy"
-    };
+    // Use .text property to extract output string.
+    const text = response.text || '{}';
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("AI Response Error:", e);
+    return { barks: "Woof!", translation: "I'm just happy to see you!", mood: "happy" };
   }
 };
 
-export const generateCorgiImage = async (petState: PetState, scenario: string) => {
-  const model = 'gemini-2.5-flash-image';
-  
-  let growthDescriptor = "puppy";
-  if (petState.ageMonths >= 6 && petState.ageMonths < 12) growthDescriptor = "growing young corgi";
-  if (petState.ageMonths >= 12) growthDescriptor = "adult corgi";
-
-  const prompt = `A professional high-quality photo of a ${growthDescriptor}. 
-    Breed: ${petState.breed}. 
-    Coat Color: ${petState.color}. 
-    Age: ${petState.ageMonths} months old. 
-    Current activity: ${scenario}.
-    The dog is expressive and reflects its age. 
-    Cinematic lighting, bright and joyful atmosphere, 4k resolution.`;
+/**
+ * Generates a high-quality image of the pet in a specific scenario.
+ * Uses gemini-2.5-flash-image for visual representation.
+ */
+export const generateCorgiImage = async (pet: PetState, scenario: string) => {
+  const ai = getAI();
+  const growth = pet.ageMonths < 6 ? "tiny puppy" : pet.ageMonths < 12 ? "young dog" : "full grown dog";
+  const prompt = `A professional 4k photo of a ${growth} ${pet.breed} with ${pet.color} coat. Scenario: ${scenario}. High quality, cinematic lighting.`;
 
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1"
+      config: { imageConfig: { aspectRatio: "1:1" } }
+    });
+    
+    // Iterate through all parts to find the image part as per guidelines.
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64EncodeString: string = part.inlineData.data;
+          return `data:image/png;base64,${base64EncodeString}`;
         }
       }
-    });
-
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
     }
-  } catch (error) {
-    console.error("Image generation error:", error);
-    return `https://picsum.photos/seed/${scenario}-${petState.color}-${petState.ageMonths}/400/400`;
+    return null;
+  } catch (e) {
+    console.error("AI Image Error:", e);
+    // Fallback if image generation fails or is blocked.
+    return `https://picsum.photos/seed/${pet.name}-${scenario}/500/500`;
   }
 };
