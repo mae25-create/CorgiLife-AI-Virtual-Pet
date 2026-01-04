@@ -3,10 +3,10 @@ export interface PetState {
   name: string;
   breed: string;
   color: string;
-  ageMonths: number; // Current age, increments on level up
-  hunger: number; // 0-100
-  happiness: number; // 0-100
-  energy: number; // 0-100
+  ageMonths: number;
+  hunger: number;
+  happiness: number;
+  energy: number;
   level: number;
   xp: number;
   lastFed: number;

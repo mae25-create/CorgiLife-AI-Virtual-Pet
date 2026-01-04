@@ -7,7 +7,7 @@ import { generateCorgiResponse, generateCorgiImage } from './services/geminiServ
 
 const App: React.FC = () => {
   const [pet, setPet] = useState<PetState>(() => {
-    const saved = localStorage.getItem('corgi-breeder-final-v1');
+    const saved = localStorage.getItem('corgi-breeder-v1');
     return saved ? JSON.parse(saved) : INITIAL_STATE;
   });
 
@@ -17,32 +17,32 @@ const App: React.FC = () => {
   const [petImage, setPetImage] = useState<string>('');
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Initial welcome message and image once adopted
+  // Adoption trigger
   useEffect(() => {
     if (pet.isAdopted && messages.length === 0) {
       setMessages([{ 
         role: 'corgi', 
-        text: `Bork bork! (Hello! My name is ${pet.name}. I'm a ${pet.ageMonths}-month-old ${pet.breed}. Let's be friends!)`, 
+        text: `Bork bork! (Hello! My name is ${pet.name}. Let's be friends!)`, 
         mood: 'happy' 
       }]);
       triggerNewImage('excitedly greeting its new owner');
     }
   }, [pet.isAdopted]);
 
-  // Sync state to local storage
+  // Persist state
   useEffect(() => {
-    localStorage.setItem('corgi-breeder-final-v1', JSON.stringify(pet));
+    localStorage.setItem('corgi-breeder-v1', JSON.stringify(pet));
   }, [pet]);
 
-  // Auto-scroll chat to latest message
+  // Auto scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Game Loop: Stats decay and Sleep recovery
+  // Stat Decay Loop
   useEffect(() => {
     if (!pet.isAdopted) return;
     const interval = setInterval(() => {
@@ -53,6 +53,7 @@ const App: React.FC = () => {
             ...prev,
             energy: newEnergy,
             hunger: Math.max(0, prev.hunger - 0.4),
+            // Wake up if fully rested
             isSleeping: newEnergy >= MAX_STAT ? false : true
           };
         }
@@ -82,7 +83,7 @@ const App: React.FC = () => {
       xp: pet.xp + activity.xpGain
     };
 
-    // Level Up and Age increment logic
+    // Level up logic: 1 level = 1 month
     if (updatedPet.xp >= XP_PER_LEVEL) {
       updatedPet.level += 1;
       updatedPet.ageMonths += 1;
@@ -94,6 +95,7 @@ const App: React.FC = () => {
 
     setPet(updatedPet);
 
+    // AI Response
     setIsTyping(true);
     const aiResp = await generateCorgiResponse(`I just ${activity.name.toLowerCase()} with you!`, updatedPet, []);
     setIsTyping(false);
@@ -105,6 +107,7 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
+    // Random image generation for significant actions
     if (Math.random() > 0.6) {
       triggerNewImage(activity.name.toLowerCase());
     }
@@ -112,7 +115,7 @@ const App: React.FC = () => {
 
   const triggerNewImage = async (context: string) => {
     setIsGeneratingImage(true);
-    const newImg = await generateCorgiImage(pet, `is ${context}`);
+    const newImg = await generateCorgiImage(pet, context);
     if (newImg) setPetImage(newImg);
     setIsGeneratingImage(false);
   };
@@ -124,8 +127,8 @@ const App: React.FC = () => {
     const userMsg = inputValue;
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInputValue('');
-    setIsTyping(true);
 
+    setIsTyping(true);
     const aiResp = await generateCorgiResponse(userMsg, pet, []);
     setIsTyping(false);
 
@@ -136,6 +139,7 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
+    // Small happiness boost for talking
     setPet(prev => ({ ...prev, happiness: Math.min(MAX_STAT, prev.happiness + 2) }));
   };
 
@@ -160,13 +164,11 @@ const App: React.FC = () => {
     return "Just Now";
   };
 
-  // Renderer for Onboarding (Step 1)
   if (!pet.isAdopted) {
     return (
       <div className="min-h-screen bg-[#fdf6e3] flex flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/paws.png')]">
         <div className="max-w-2xl w-full bg-white rounded-[3.5rem] shadow-2xl p-10 md:p-14 border-[12px] border-orange-100 animate-in fade-in slide-in-from-top-4 duration-700 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-orange-400"></div>
-          
           <div className="text-center mb-10">
             <span className="text-7xl block mb-6 animate-bounce">🦴</span>
             <h1 className="text-5xl font-brand text-orange-600 mb-3 tracking-tight">Electronic Breeder</h1>
@@ -178,21 +180,20 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">1. Select Breed</label>
                 <select 
-                  value={pet.breed}
+                  value={pet.breed} 
                   onChange={(e) => setPet(prev => ({ ...prev, breed: e.target.value }))}
                   className="w-full p-5 rounded-2xl bg-orange-50/50 border-2 border-orange-100 focus:border-orange-400 focus:outline-none transition-all font-bold text-stone-700 appearance-none shadow-sm cursor-pointer"
                 >
                   {BREEDS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
-
               <div className="space-y-2">
                 <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">2. Starting Month</label>
                 <input 
-                  type="number"
-                  min="2"
-                  max="36"
-                  value={pet.ageMonths}
+                  type="number" 
+                  min="2" 
+                  max="36" 
+                  value={pet.ageMonths} 
                   onChange={(e) => setPet(prev => ({ ...prev, ageMonths: parseInt(e.target.value) || 2 }))}
                   className="w-full p-5 rounded-2xl bg-orange-50/50 border-2 border-orange-100 focus:border-orange-400 focus:outline-none transition-all font-bold text-stone-700 shadow-sm"
                 />
@@ -207,7 +208,9 @@ const App: React.FC = () => {
                     key={c}
                     onClick={() => setPet(prev => ({ ...prev, color: c }))}
                     className={`p-4 text-[10px] font-black rounded-2xl border-2 transition-all shadow-sm ${
-                      pet.color === c ? 'border-orange-400 bg-orange-500 text-white scale-105' : 'border-orange-100 bg-white text-stone-500 hover:border-orange-300'
+                      pet.color === c 
+                      ? 'border-orange-400 bg-orange-500 text-white scale-105' 
+                      : 'border-orange-100 bg-white text-stone-500 hover:border-orange-300'
                     }`}
                   >
                     {c}
@@ -219,15 +222,15 @@ const App: React.FC = () => {
             <div className="space-y-2">
               <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">4. Name Your Corgi</label>
               <input 
-                type="text"
-                placeholder="Give your friend a name..."
-                value={pet.name}
+                type="text" 
+                placeholder="Give your friend a name..." 
+                value={pet.name} 
                 onChange={(e) => setPet(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full p-6 rounded-3xl bg-stone-50 border-2 border-stone-200 focus:border-orange-400 focus:outline-none transition-all font-brand text-2xl text-stone-800 placeholder:text-stone-300 text-center"
               />
             </div>
 
-            <button
+            <button 
               onClick={handleAdopt}
               disabled={!pet.name.trim()}
               className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-[2rem] font-brand text-2xl shadow-2xl hover:shadow-orange-300/60 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1"
@@ -240,12 +243,12 @@ const App: React.FC = () => {
     );
   }
 
-  // Main UI (Step 2)
   return (
     <div className="min-h-screen flex flex-col items-center bg-[#fdf6e3] p-4 md:p-10 relative overflow-x-hidden">
+      {/* Decorative paw print texture background */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paws.png')]"></div>
 
-      {/* App Header */}
+      {/* Header Info */}
       <header className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center gap-6 mb-12 relative z-10">
         <div className="text-center md:text-left">
           <h1 className="text-5xl font-brand text-orange-600 drop-shadow-sm flex items-center gap-3 justify-center md:justify-start">
@@ -256,78 +259,63 @@ const App: React.FC = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-5">
-          <div className="bg-white px-6 py-4 rounded-[2rem] shadow-xl border-4 border-orange-100 flex items-center gap-5 transform hover:scale-105 transition-transform">
-            <div className="text-4xl">🏅</div>
-            <div>
-              <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Level</div>
-              <div className="text-3xl font-brand text-orange-500 leading-none">{pet.level}</div>
+        <div className="bg-white px-6 py-4 rounded-[2rem] shadow-xl border-4 border-orange-100 flex items-center gap-5 transform hover:scale-105 transition-transform">
+          <div className="text-4xl">🏅</div>
+          <div>
+            <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Level</div>
+            <div className="text-3xl font-brand text-orange-500 leading-none">{pet.level}</div>
+          </div>
+          <div className="h-12 w-1 bg-stone-100 rounded-full mx-1"></div>
+          <div className="flex-1 min-w-[120px]">
+            <div className="flex justify-between items-end mb-2 text-xs font-black text-stone-400">
+              XP {pet.xp}/{XP_PER_LEVEL}
             </div>
-            <div className="h-12 w-1 bg-stone-100 rounded-full mx-1"></div>
-            <div className="flex-1 min-w-[120px]">
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-xs font-black text-stone-400 tracking-tighter">GROWTH XP</span>
-                <span className="text-xs font-black text-orange-500">{pet.xp}/{XP_PER_LEVEL}</span>
-              </div>
-              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                <div 
-                  className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full" 
-                  style={{ width: `${(pet.xp / XP_PER_LEVEL) * 100}%` }}
-                ></div>
-              </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full" 
+                style={{ width: `${(pet.xp / XP_PER_LEVEL) * 100}%` }}
+              ></div>
             </div>
           </div>
-          
-          <button 
-            onClick={() => {
-              if (confirm('Abandon your journey? This will reset everything.')) {
-                localStorage.removeItem('corgi-breeder-final-v1');
-                window.location.reload();
-              }
-            }}
-            className="p-5 bg-white text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-3xl shadow-xl border-4 border-stone-50 transition-all active:scale-90"
-            title="Reset Game"
-          >
-            <span className="text-2xl">🔄</span>
-          </button>
         </div>
       </header>
 
-      {/* Main Content Grid */}
       <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative z-10">
         
-        {/* Visuals and Stats Section */}
+        {/* Left Column: Pet Visual & Stats */}
         <div className="space-y-10">
+          
+          {/* Main Visualizer */}
           <div className="relative group overflow-hidden rounded-[4rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-[16px] border-white aspect-square flex items-center justify-center">
              {isGeneratingImage && (
                <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center">
                  <div className="animate-spin text-7xl mb-6">📷</div>
-                 <div className="text-orange-600 font-brand text-2xl animate-pulse tracking-wide">Drawing {pet.name}...</div>
+                 <div className="text-orange-600 font-brand text-2xl animate-pulse">Drawing {pet.name}...</div>
                </div>
              )}
+
+             {showLevelUp && (
+               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-orange-500/20 backdrop-blur-md animate-in zoom-in duration-500 pointer-events-none">
+                 <div className="text-9xl mb-4 animate-bounce">🎈</div>
+                 <h2 className="text-6xl font-brand text-white drop-shadow-2xl">LEVEL UP!</h2>
+                 <p className="text-white text-2xl font-black mt-4 uppercase tracking-[0.4em]">1 Month Older ✨</p>
+               </div>
+             )}
+
              <img 
                src={petImage || `https://picsum.photos/seed/${pet.name}/800/800`} 
                alt={pet.name} 
-               className={`w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 ${pet.isSleeping ? 'brightness-50 grayscale' : ''}`}
+               className={`w-full h-full object-cover transition-all duration-700 ${pet.isSleeping ? 'brightness-50 grayscale' : 'group-hover:scale-110'}`}
              />
+
              {pet.isSleeping && (
-               <div className="absolute top-16 right-16 text-8xl animate-bounce drop-shadow-2xl">💤</div>
-             )}
-             {showLevelUp && (
-               <div className="absolute inset-0 bg-yellow-400/95 z-30 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-                 <div className="text-[10rem] mb-6 drop-shadow-2xl">🎂</div>
-                 <h2 className="text-7xl font-brand text-white drop-shadow-2xl mb-4">BIRTHDAY!</h2>
-                 <p className="text-white font-black text-2xl tracking-widest text-center px-10">
-                   {pet.name} IS NOW {pet.ageMonths} MONTHS OLD!
-                 </p>
-               </div>
+               <div className="absolute top-16 right-16 text-8xl animate-bounce z-20">💤</div>
              )}
           </div>
 
-          <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 border-4 border-orange-50 transform hover:rotate-1 transition-transform">
-            <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">
-              <span className="p-4 bg-orange-100 rounded-[2rem] text-3xl shadow-sm">🩺</span> Vital Signs
-            </h3>
+          {/* Vital Signs Card */}
+          <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 border-4 border-orange-50">
+            <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">🩺 Vital Signs</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               <StatusBar label="Hunger" value={pet.hunger} color="bg-amber-400" icon="🥩" />
               <StatusBar label="Mood" value={pet.happiness} color="bg-pink-400" icon="💖" />
@@ -335,24 +323,29 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* Activities Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {ACTIVITIES.map(act => (
-              <button
-                key={act.id}
+              <button 
+                key={act.id} 
                 onClick={() => handleAction(act)}
                 disabled={pet.isSleeping}
-                className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] bg-white shadow-xl border-b-[12px] border-stone-100 hover:border-orange-200 hover:-translate-y-2 transition-all group active:scale-95 ${pet.isSleeping ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
+                className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] bg-white shadow-xl border-b-[12px] border-stone-100 transition-all group ${
+                  pet.isSleeping 
+                  ? 'opacity-30 grayscale cursor-not-allowed' 
+                  : 'hover:-translate-y-2 hover:bg-orange-50 active:translate-y-1 active:border-b-4'
+                }`}
               >
-                <span className="text-5xl mb-3 group-hover:scale-125 transition-transform duration-500">{act.icon}</span>
-                <span className="text-sm font-black text-stone-600 uppercase tracking-tighter text-center leading-none">{act.name}</span>
+                <span className="text-5xl mb-3 group-hover:scale-125 transition-transform">{act.icon}</span>
+                <span className="text-sm font-black text-stone-600 uppercase tracking-tighter text-center">{act.name}</span>
               </button>
             ))}
-            <button
+            <button 
               onClick={toggleSleep}
-              className={`col-span-2 md:col-span-4 flex items-center justify-center gap-5 p-8 rounded-[3rem] shadow-2xl border-b-[12px] transition-all hover:-translate-y-2 active:scale-95 ${
+              className={`col-span-2 md:col-span-4 flex items-center justify-center gap-5 p-8 rounded-[3rem] shadow-2xl border-b-[12px] transition-all ${
                 pet.isSleeping 
-                ? 'bg-indigo-700 text-white border-indigo-900 shadow-indigo-200' 
-                : 'bg-white text-stone-700 border-stone-100 hover:bg-stone-50 hover:border-orange-200 shadow-orange-50'
+                ? 'bg-indigo-700 text-white border-indigo-900 active:translate-y-1 active:border-b-4' 
+                : 'bg-white text-stone-700 border-stone-100 hover:bg-indigo-50 active:translate-y-1 active:border-b-4'
               }`}
             >
               <span className="text-4xl">{pet.isSleeping ? '☀️' : '🌙'}</span>
@@ -361,13 +354,14 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* AI Interaction and Chat History Section */}
-        <div className="bg-white rounded-[4rem] shadow-2xl flex flex-col h-[700px] lg:h-[950px] border-8 border-orange-50 overflow-hidden relative transform hover:-rotate-1 transition-transform">
+        {/* Right Column: AI Bark Translator */}
+        <div className="bg-white rounded-[4rem] shadow-2xl flex flex-col h-[700px] lg:h-[950px] border-8 border-orange-50 overflow-hidden relative">
+          
           <div className="p-8 border-b-4 border-orange-50 bg-orange-50/20 flex items-center gap-6">
-            <div className="w-20 h-20 rounded-3xl bg-orange-300 flex items-center justify-center text-5xl shadow-xl shadow-orange-100 ring-4 ring-white">🐕</div>
+            <div className="w-20 h-20 rounded-3xl bg-orange-300 flex items-center justify-center text-5xl">🐕</div>
             <div>
-              <h3 className="font-brand text-stone-700 text-3xl leading-none mb-2">{pet.name}'s Diary</h3>
-              <p className="text-xs text-orange-600 font-black uppercase tracking-[0.3em] flex items-center gap-2">
+              <h3 className="font-brand text-stone-700 text-3xl mb-2">{pet.name}'s Diary</h3>
+              <p className="text-xs text-orange-600 font-black uppercase flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> Live Bark Translator
               </p>
             </div>
@@ -375,22 +369,17 @@ const App: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto p-10 space-y-8 scroll-smooth scrollbar-hide">
             {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-5 duration-500`}>
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
                 <div className={`max-w-[85%] rounded-[2.5rem] p-7 shadow-lg relative ${
                   msg.role === 'user' 
-                  ? 'bg-orange-500 text-white rounded-tr-none shadow-orange-100' 
-                  : 'bg-stone-50 text-stone-800 rounded-tl-none border-2 border-stone-100 shadow-stone-50'
+                  ? 'bg-orange-500 text-white rounded-tr-none' 
+                  : 'bg-stone-50 text-stone-800 rounded-tl-none border-2 border-stone-100'
                 }`}>
                   <p className="font-bold text-xl leading-relaxed">{msg.text}</p>
                   {msg.translation && (
                     <div className="mt-6 pt-6 border-t-2 border-black/5 text-base italic font-semibold opacity-80 text-stone-600">
-                      <span className="text-[11px] block font-black uppercase tracking-[0.2em] text-orange-400 mb-2">Internal Thoughts</span>
+                      <span className="text-[11px] block font-black uppercase tracking-[0.2em] text-orange-400 mb-2">Translation</span>
                       "{msg.translation}"
-                    </div>
-                  )}
-                  {msg.mood && msg.role !== 'user' && (
-                    <div className="absolute -bottom-4 left-10 px-4 py-1.5 bg-white border-2 border-stone-100 rounded-full text-[10px] font-black uppercase text-orange-400 shadow-md ring-2 ring-white">
-                      Mood: {msg.mood}
                     </div>
                   )}
                 </div>
@@ -398,10 +387,10 @@ const App: React.FC = () => {
             ))}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-stone-50 border-2 border-stone-100 rounded-full px-10 py-5 flex gap-3 shadow-sm">
-                  <div className="w-3 h-3 bg-orange-300 rounded-full animate-bounce"></div>
-                  <div className="w-3 h-3 bg-orange-300 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
-                  <div className="w-3 h-3 bg-orange-300 rounded-full animate-bounce [animation-delay:-0.4s]"></div>
+                <div className="bg-stone-50 border-2 border-stone-100 rounded-full px-10 py-5 flex gap-3 items-center">
+                  <div className="w-3 h-3 bg-stone-300 rounded-full animate-bounce"></div>
+                  <div className="w-3 h-3 bg-stone-300 rounded-full animate-bounce delay-75"></div>
+                  <div className="w-3 h-3 bg-stone-300 rounded-full animate-bounce delay-150"></div>
                 </div>
               </div>
             )}
@@ -409,46 +398,46 @@ const App: React.FC = () => {
           </div>
 
           <form onSubmit={handleSendMessage} className="p-8 bg-white border-t-4 border-orange-50">
-            <div className="flex gap-4 items-center bg-stone-50 p-3 rounded-[2.5rem] border-4 border-stone-100 focus-within:border-orange-400 focus-within:bg-white transition-all shadow-inner">
-              <input
-                type="text"
-                value={inputValue}
+            <div className="flex gap-4 items-center bg-stone-50 p-3 rounded-[2.5rem] border-4 border-stone-100 focus-within:border-orange-400 shadow-inner">
+              <input 
+                type="text" 
+                value={inputValue} 
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={`Talk to ${pet.name}...`}
-                className="flex-1 p-4 bg-transparent border-none focus:outline-none font-bold text-xl text-stone-700 placeholder:text-stone-300"
+                className="flex-1 p-4 bg-transparent border-none focus:outline-none font-bold text-xl text-stone-700"
               />
               <button 
                 type="submit"
-                className="bg-orange-500 hover:bg-orange-600 text-white w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-bold shadow-2xl transition-all active:scale-90 hover:-translate-y-1"
+                className="bg-orange-500 text-white w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-bold shadow-2xl hover:scale-105 active:scale-90 transition-all"
               >
-                <span className="text-3xl">🐾</span>
+                🐾
               </button>
             </div>
           </form>
         </div>
       </main>
 
-      {/* Aesthetic Footer Dashboard */}
+      {/* Footer Info */}
       <footer className="mt-20 w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-6 pb-20 relative z-10">
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:scale-105 transition-all">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">🎂</span>
             <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Growth</span>
             <p className="font-brand text-2xl text-stone-700">{pet.ageMonths} Months</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:scale-105 transition-all">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">🧬</span>
-            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Lineage</span>
+            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Breed</span>
             <p className="font-brand text-2xl text-stone-700">{pet.breed.split(' ')[0]}</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:scale-105 transition-all">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">🏡</span>
             <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Bonded</span>
             <p className="font-brand text-2xl text-stone-700">{getBondedTime()}</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:scale-105 transition-all">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
             <span className="block text-4xl mb-2">✨</span>
             <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Status</span>
-            <p className="font-brand text-2xl text-green-500 uppercase">Thriving</p>
+            <p className="font-brand text-2xl text-green-500">THRIVING</p>
          </div>
       </footer>
     </div>

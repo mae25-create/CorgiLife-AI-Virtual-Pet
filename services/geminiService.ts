@@ -71,10 +71,9 @@ export const generateCorgiImage = async (petState: PetState, scenario: string) =
     Breed: ${petState.breed}. 
     Coat Color: ${petState.color}. 
     Age: ${petState.ageMonths} months old. 
-    Name: ${petState.name}. 
-    Current activity: ${scenario}. 
-    The dog is expressive, cute, and reflects its age in size and features. 
-    Soft cinematic lighting, garden background, 4k resolution.`;
+    Current activity: ${scenario}.
+    The dog is expressive and reflects its age. 
+    Cinematic lighting, bright and joyful atmosphere, 4k resolution.`;
 
   try {
     const response = await ai.models.generateContent({

@@ -36,12 +36,12 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'feed',
     name: 'Give Treat',
-    icon: '🦴',
+    icon: '🥩',
     hungerEffect: 20,
     happinessEffect: 5,
     energyEffect: 0,
     xpGain: 10,
-    description: 'A tasty bone for a good boy!'
+    description: 'A tasty treat for a good dog!'
   },
   {
     id: 'play',
