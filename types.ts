@@ -14,6 +14,7 @@ export interface PetState {
   isSleeping: boolean;
   adoptedAt: number;
   isAdopted: boolean;
+  customPhoto?: string; // Base64 reference photo
 }
 
 export interface CorgiMessage {

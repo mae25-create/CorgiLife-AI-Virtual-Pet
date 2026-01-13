@@ -1,9 +1,11 @@
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PetState, CorgiMessage, Activity } from './types';
 import { INITIAL_STATE, ACTIVITIES, MAX_STAT, XP_PER_LEVEL, BREEDS, COLORS } from './constants';
 import StatusBar from './components/StatusBar';
 import { generateCorgiResponse, generateCorgiImage } from './services/geminiService';
+
+type OnboardingMode = 'none' | 'adopt' | 'upload';
 
 const App: React.FC = () => {
   const [pet, setPet] = useState<PetState>(() => {
@@ -11,6 +13,7 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_STATE;
   });
 
+  const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('none');
   const [messages, setMessages] = useState<CorgiMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -20,6 +23,7 @@ const App: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Bonding clock update
   useEffect(() => {
@@ -56,7 +60,6 @@ const App: React.FC = () => {
       setPet(prev => {
         if (prev.isSleeping) {
           const newEnergy = Math.min(MAX_STAT, prev.energy + 8);
-          
           return {
             ...prev,
             energy: newEnergy,
@@ -64,7 +67,6 @@ const App: React.FC = () => {
             isSleeping: newEnergy >= MAX_STAT ? false : true
           };
         }
-
         return {
           ...prev,
           hunger: Math.max(0, prev.hunger - 0.25),
@@ -73,16 +75,22 @@ const App: React.FC = () => {
         };
       });
     }, 5000);
-
     return () => clearInterval(interval);
   }, [pet.isAdopted, pet.isSleeping]);
 
-  const handleAdopt = () => {
+  const handleAdopt = async () => {
     if (!pet.name.trim()) return;
+    setIsGeneratingImage(true);
+    // Generate the initial image before finalizing adoption to show it immediately
+    const firstImg = await generateCorgiImage(pet, 'happily posing for its first day home');
+    if (firstImg) setPetImage(firstImg);
     setPet(prev => ({ ...prev, isAdopted: true, adoptedAt: Date.now() }));
+    setIsGeneratingImage(false);
   };
 
   const handleAction = async (activity: Activity) => {
+    if (isGeneratingImage || isTyping) return;
+
     const updatedPet = {
       ...pet,
       hunger: Math.min(MAX_STAT, pet.hunger + activity.hungerEffect),
@@ -101,7 +109,6 @@ const App: React.FC = () => {
     }
 
     setPet(updatedPet);
-
     setIsTyping(true);
     const aiResp = await generateCorgiResponse(`I just ${activity.name.toLowerCase()} with you!`, updatedPet, []);
     setIsTyping(false);
@@ -127,7 +134,7 @@ const App: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isTyping) return;
 
     const userMsg = inputValue;
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
@@ -157,14 +164,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPet(prev => ({ ...prev, customPhoto: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const bondedTime = useMemo(() => {
     const diff = currentTime - pet.adoptedAt;
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
     const pluralize = (val: number, unit: string) => `${val} ${unit}${val === 1 ? '' : 's'}`;
-
     if (days >= 1) return pluralize(days, 'Day');
     if (hours >= 1) return pluralize(hours, 'Hour');
     if (minutes >= 1) return pluralize(minutes, 'Minute');
@@ -176,75 +192,149 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#fdf6e3] flex flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/paws.png')]">
         <div className="max-w-2xl w-full bg-white rounded-[3.5rem] shadow-2xl p-10 md:p-14 border-[12px] border-orange-100 animate-in fade-in slide-in-from-top-4 duration-700 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-orange-400"></div>
-          <div className="text-center mb-10">
-            <span className="text-7xl block mb-6 animate-bounce">🦴</span>
-            <h1 className="text-5xl font-brand text-orange-600 mb-3 tracking-tight">Electronic Breeder</h1>
-            <p className="text-stone-500 font-semibold text-lg italic">Adopt and raise your unique companion</p>
-          </div>
-
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">1. Select Breed</label>
-                <select 
-                  value={pet.breed} 
-                  onChange={(e) => setPet(prev => ({ ...prev, breed: e.target.value }))}
-                  className="w-full p-5 rounded-2xl bg-orange-50/50 border-2 border-orange-100 focus:border-orange-400 focus:outline-none transition-all font-bold text-stone-700 appearance-none shadow-sm cursor-pointer"
-                >
-                  {BREEDS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
+          
+          {onboardingMode === 'none' ? (
+            <div className="text-center space-y-10 py-6 animate-in fade-in zoom-in duration-500">
+              <div className="mb-8">
+                <span className="text-8xl block mb-6 animate-bounce">🦴</span>
+                <h1 className="text-5xl font-brand text-orange-600 mb-3 tracking-tight">Corgi Breeder</h1>
+                <p className="text-stone-500 font-semibold text-lg italic">How would you like to start?</p>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">2. Starting Month</label>
-                <input 
-                  type="number" 
-                  min="2" 
-                  max="36" 
-                  value={pet.ageMonths} 
-                  onChange={(e) => setPet(prev => ({ ...prev, ageMonths: parseInt(e.target.value) || 2 }))}
-                  className="w-full p-5 rounded-2xl bg-orange-50/50 border-2 border-orange-100 focus:border-orange-400 focus:outline-none transition-all font-bold text-stone-700 shadow-sm"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <button 
+                  onClick={() => setOnboardingMode('adopt')}
+                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center"
+                >
+                  <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center text-5xl mb-6 group-hover:scale-110 transition-transform">🐕</div>
+                  <h2 className="font-brand text-2xl text-stone-700 mb-2">Adopt a New Corgi</h2>
+                  <p className="text-stone-400 text-sm font-bold">AI will generate a unique companion for you!</p>
+                </button>
+
+                <button 
+                  onClick={() => setOnboardingMode('upload')}
+                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center"
+                >
+                  <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center text-5xl mb-6 group-hover:scale-110 transition-transform">📸</div>
+                  <h2 className="font-brand text-2xl text-stone-700 mb-2">My Real Corgi</h2>
+                  <p className="text-stone-400 text-sm font-bold">Upload a photo and let AI bring them to life!</p>
+                </button>
               </div>
             </div>
+          ) : (
+            <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+              <button 
+                onClick={() => { setOnboardingMode('none'); setPet(prev => ({ ...prev, customPhoto: undefined })); }}
+                className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2 hover:text-orange-500 transition-colors"
+              >
+                ← Back to choice
+              </button>
 
-            <div className="space-y-3">
-              <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">3. Coat Appearance</label>
-              <div className="grid grid-cols-3 gap-3">
-                {COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setPet(prev => ({ ...prev, color: c }))}
-                    className={`p-4 text-[10px] font-black rounded-2xl border-2 transition-all shadow-sm ${
-                      pet.color === c 
-                      ? 'border-orange-400 bg-orange-500 text-white scale-105' 
-                      : 'border-orange-100 bg-white text-stone-500 hover:border-orange-300'
+              <div className="text-center mb-6">
+                <h2 className="text-4xl font-brand text-orange-600">
+                  {onboardingMode === 'adopt' ? 'Adoption Center' : 'Digital Twin Setup'}
+                </h2>
+                <p className="text-stone-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">
+                  {onboardingMode === 'adopt' ? 'Select traits for your new friend' : 'Provide a clear reference photo'}
+                </p>
+              </div>
+
+              {onboardingMode === 'upload' && (
+                <div className="space-y-4">
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">1. Upload Photo</label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`w-full h-48 rounded-[2.5rem] border-4 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden ${
+                      pet.customPhoto ? 'border-orange-400 bg-orange-50 shadow-inner' : 'border-stone-200 bg-stone-50 hover:border-orange-300'
                     }`}
                   >
-                    {c}
-                  </button>
-                ))}
+                    {pet.customPhoto ? (
+                      <div className="relative w-full h-full flex items-center justify-center group">
+                        <img src={pet.customPhoto} alt="Reference" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white font-bold uppercase text-xs tracking-widest">Change Photo</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-5xl mb-3">📸</span>
+                        <p className="text-xs font-bold text-stone-400">Tap to upload reference</p>
+                        <p className="text-[10px] text-stone-300 mt-1 uppercase tracking-tighter">AI will copy unique markings</p>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Select Breed</label>
+                  <select 
+                    value={pet.breed} 
+                    onChange={(e) => setPet(prev => ({ ...prev, breed: e.target.value }))}
+                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm"
+                  >
+                    {BREEDS.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Age (Months)</label>
+                  <input 
+                    type="number" 
+                    min="2" 
+                    max="36" 
+                    value={pet.ageMonths} 
+                    onChange={(e) => setPet(prev => ({ ...prev, ageMonths: parseInt(e.target.value) || 2 }))}
+                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">4. Name Your Corgi</label>
-              <input 
-                type="text" 
-                placeholder="Give your friend a name..." 
-                value={pet.name} 
-                onChange={(e) => setPet(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full p-6 rounded-3xl bg-stone-50 border-2 border-stone-200 focus:border-orange-400 focus:outline-none transition-all font-brand text-2xl text-stone-800 placeholder:text-stone-300 text-center"
-              />
-            </div>
+              <div className="space-y-3">
+                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Coat Color Appearance</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setPet(prev => ({ ...prev, color: c }))}
+                      className={`p-3 text-[9px] font-black rounded-xl border-2 transition-all ${
+                        pet.color === c ? 'border-orange-400 bg-orange-500 text-white' : 'border-stone-100 bg-white text-stone-500'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <button 
-              onClick={handleAdopt}
-              disabled={!pet.name.trim()}
-              className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-[2rem] font-brand text-2xl shadow-2xl hover:shadow-orange-300/60 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1"
-            >
-              Start Raising {pet.name || 'Your Dog'} ✨
-            </button>
-          </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Pet Name</label>
+                <input 
+                  type="text" 
+                  placeholder="What's their name?" 
+                  value={pet.name} 
+                  onChange={(e) => setPet(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-5 rounded-3xl bg-stone-50 border-2 border-stone-100 focus:border-orange-400 focus:outline-none transition-all font-brand text-2xl text-stone-800 text-center"
+                />
+              </div>
+
+              <button 
+                onClick={handleAdopt}
+                disabled={!pet.name.trim() || (onboardingMode === 'upload' && !pet.customPhoto) || isGeneratingImage}
+                className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-[2rem] font-brand text-2xl shadow-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Preparing {pet.name}...
+                  </>
+                ) : (
+                  <>Start Adventure ✨</>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -261,6 +351,7 @@ const App: React.FC = () => {
           </h1>
           <p className="text-lg text-stone-500 font-bold mt-1">
             {pet.ageMonths} Month Old {pet.breed} • <span className="text-orange-400">{pet.color}</span>
+            {pet.customPhoto && <span className="ml-3 text-[9px] bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase font-black border border-orange-200">Ref Photo Active</span>}
           </p>
         </div>
 
@@ -293,7 +384,9 @@ const App: React.FC = () => {
              {isGeneratingImage && (
                <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center">
                  <div className="animate-spin text-7xl mb-6">📷</div>
-                 <div className="text-orange-600 font-brand text-2xl animate-pulse">Drawing {pet.name}...</div>
+                 <div className="text-orange-600 font-brand text-2xl animate-pulse text-center px-6">
+                    {pet.customPhoto ? "Personalizing AI to your Corgi..." : `Drawing ${pet.name}...`}
+                 </div>
                </div>
              )}
 
@@ -330,9 +423,9 @@ const App: React.FC = () => {
               <button 
                 key={act.id} 
                 onClick={() => handleAction(act)}
-                disabled={pet.isSleeping}
+                disabled={pet.isSleeping || isGeneratingImage}
                 className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] bg-white shadow-xl border-b-[12px] border-stone-100 transition-all group ${
-                  pet.isSleeping 
+                  pet.isSleeping || isGeneratingImage
                   ? 'opacity-30 grayscale cursor-not-allowed' 
                   : 'hover:-translate-y-2 hover:bg-orange-50 active:translate-y-1 active:border-b-4'
                 }`}
@@ -343,11 +436,12 @@ const App: React.FC = () => {
             ))}
             <button 
               onClick={toggleSleep}
+              disabled={isGeneratingImage}
               className={`col-span-2 md:col-span-4 flex items-center justify-center gap-5 p-8 rounded-[3rem] shadow-2xl border-b-[12px] transition-all ${
                 pet.isSleeping 
                 ? 'bg-indigo-700 text-white border-indigo-900 active:translate-y-1 active:border-b-4' 
                 : 'bg-white text-stone-700 border-stone-100 hover:bg-indigo-50 active:translate-y-1 active:border-b-4'
-              }`}
+              } ${isGeneratingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span className="text-4xl">{pet.isSleeping ? '☀️' : '🌙'}</span>
               <span className="font-brand text-2xl">{pet.isSleeping ? 'Good Morning!' : 'Time for Nap'}</span>
@@ -407,7 +501,8 @@ const App: React.FC = () => {
               />
               <button 
                 type="submit"
-                className="bg-orange-500 text-white w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-bold shadow-2xl hover:scale-105 active:scale-90 transition-all"
+                disabled={isTyping}
+                className="bg-orange-500 text-white w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-bold shadow-2xl hover:scale-105 active:scale-90 transition-all disabled:opacity-50"
               >
                 🐾
               </button>
