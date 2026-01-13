@@ -190,34 +190,36 @@ const App: React.FC = () => {
   if (!pet.isAdopted) {
     return (
       <div className="min-h-screen bg-[#fdf6e3] flex flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/paws.png')]">
-        <div className="max-w-2xl w-full bg-white rounded-[3.5rem] shadow-2xl p-10 md:p-14 border-[12px] border-orange-100 animate-in fade-in slide-in-from-top-4 duration-700 relative overflow-hidden">
+        <div className="max-w-3xl w-full bg-white rounded-[3.5rem] shadow-2xl p-10 md:p-14 border-[12px] border-orange-100 animate-in fade-in slide-in-from-top-4 duration-700 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-orange-400"></div>
           
           {onboardingMode === 'none' ? (
-            <div className="text-center space-y-10 py-6 animate-in fade-in zoom-in duration-500">
+            <div className="text-center space-y-12 py-6 animate-in fade-in zoom-in duration-500">
               <div className="mb-8">
                 <span className="text-8xl block mb-6 animate-bounce">🦴</span>
-                <h1 className="text-5xl font-brand text-orange-600 mb-3 tracking-tight">Corgi Breeder</h1>
-                <p className="text-stone-500 font-semibold text-lg italic">How would you like to start?</p>
+                <h1 className="text-5xl font-brand text-orange-600 mb-3 tracking-tight">Corgi World</h1>
+                <p className="text-stone-500 font-semibold text-lg italic">Choose your entry into the electronic world</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <button 
                   onClick={() => setOnboardingMode('adopt')}
-                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center"
+                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center overflow-hidden"
                 >
                   <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center text-5xl mb-6 group-hover:scale-110 transition-transform">🐕</div>
-                  <h2 className="font-brand text-2xl text-stone-700 mb-2">Adopt a New Corgi</h2>
-                  <p className="text-stone-400 text-sm font-bold">AI will generate a unique companion for you!</p>
+                  <h2 className="font-brand text-xl text-stone-700 mb-2 leading-tight">Let's have a real corgi in Electronic world?</h2>
+                  <p className="text-stone-400 text-xs font-bold px-4">Begin your journey with a new digital companion!</p>
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-orange-100 group-hover:bg-orange-400 transition-colors"></div>
                 </button>
 
                 <button 
                   onClick={() => setOnboardingMode('upload')}
-                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center"
+                  className="group relative bg-white border-4 border-stone-100 p-8 rounded-[3rem] shadow-xl hover:border-orange-400 hover:-translate-y-2 transition-all flex flex-col items-center text-center overflow-hidden"
                 >
                   <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center text-5xl mb-6 group-hover:scale-110 transition-transform">📸</div>
-                  <h2 className="font-brand text-2xl text-stone-700 mb-2">My Real Corgi</h2>
-                  <p className="text-stone-400 text-sm font-bold">Upload a photo and let AI bring them to life!</p>
+                  <h2 className="font-brand text-xl text-stone-700 mb-2 leading-tight">Bring your real friend home</h2>
+                  <p className="text-stone-400 text-xs font-bold px-4">Upload a photo to see them in the electronic world.</p>
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-pink-100 group-hover:bg-pink-400 transition-colors"></div>
                 </button>
               </div>
             </div>
@@ -232,16 +234,16 @@ const App: React.FC = () => {
 
               <div className="text-center mb-6">
                 <h2 className="text-4xl font-brand text-orange-600">
-                  {onboardingMode === 'adopt' ? 'Adoption Center' : 'Digital Twin Setup'}
+                  {onboardingMode === 'adopt' ? 'New Companion' : 'Connect Your Friend'}
                 </h2>
                 <p className="text-stone-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">
-                  {onboardingMode === 'adopt' ? 'Select traits for your new friend' : 'Provide a clear reference photo'}
+                  {onboardingMode === 'adopt' ? 'Specify the traits of your friend' : 'Match their appearance to the electronic world'}
                 </p>
               </div>
 
               {onboardingMode === 'upload' && (
                 <div className="space-y-4">
-                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">1. Upload Photo</label>
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">1. Connect Photo</label>
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     className={`w-full h-48 rounded-[2.5rem] border-4 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden ${
@@ -259,7 +261,7 @@ const App: React.FC = () => {
                       <>
                         <span className="text-5xl mb-3">📸</span>
                         <p className="text-xs font-bold text-stone-400">Tap to upload reference</p>
-                        <p className="text-[10px] text-stone-300 mt-1 uppercase tracking-tighter">AI will copy unique markings</p>
+                        <p className="text-[10px] text-stone-300 mt-1 uppercase tracking-tighter">Markings will be copied perfectly</p>
                       </>
                     )}
                   </div>
@@ -269,37 +271,37 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Select Breed</label>
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Breed Type</label>
                   <select 
                     value={pet.breed} 
                     onChange={(e) => setPet(prev => ({ ...prev, breed: e.target.value }))}
-                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm"
+                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm focus:outline-none focus:border-orange-300"
                   >
                     {BREEDS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Age (Months)</label>
+                  <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Current Age (Months)</label>
                   <input 
                     type="number" 
                     min="2" 
                     max="36" 
                     value={pet.ageMonths} 
                     onChange={(e) => setPet(prev => ({ ...prev, ageMonths: parseInt(e.target.value) || 2 }))}
-                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm"
+                    className="w-full p-4 rounded-2xl bg-orange-50/30 border-2 border-stone-100 font-bold text-stone-700 shadow-sm focus:outline-none focus:border-orange-300"
                   />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Coat Color Appearance</label>
+                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Coat Appearance</label>
                 <div className="grid grid-cols-3 gap-2">
                   {COLORS.map(c => (
                     <button
                       key={c}
                       onClick={() => setPet(prev => ({ ...prev, color: c }))}
                       className={`p-3 text-[9px] font-black rounded-xl border-2 transition-all ${
-                        pet.color === c ? 'border-orange-400 bg-orange-500 text-white' : 'border-stone-100 bg-white text-stone-500'
+                        pet.color === c ? 'border-orange-400 bg-orange-500 text-white shadow-md' : 'border-stone-100 bg-white text-stone-500 hover:border-orange-200'
                       }`}
                     >
                       {c}
@@ -309,28 +311,28 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Pet Name</label>
+                <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-2">Electronic Name</label>
                 <input 
                   type="text" 
-                  placeholder="What's their name?" 
+                  placeholder="What shall we call them?" 
                   value={pet.name} 
                   onChange={(e) => setPet(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full p-5 rounded-3xl bg-stone-50 border-2 border-stone-100 focus:border-orange-400 focus:outline-none transition-all font-brand text-2xl text-stone-800 text-center"
+                  className="w-full p-5 rounded-3xl bg-stone-50 border-2 border-stone-100 focus:border-orange-400 focus:outline-none transition-all font-brand text-2xl text-stone-800 text-center shadow-inner"
                 />
               </div>
 
               <button 
                 onClick={handleAdopt}
                 disabled={!pet.name.trim() || (onboardingMode === 'upload' && !pet.customPhoto) || isGeneratingImage}
-                className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-[2rem] font-brand text-2xl shadow-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-[2rem] font-brand text-2xl shadow-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 transform hover:-translate-y-1"
               >
                 {isGeneratingImage ? (
                   <>
                     <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Preparing {pet.name}...
+                    Bringing {pet.name} to life...
                   </>
                 ) : (
-                  <>Start Adventure ✨</>
+                  <>Enter Electronic World ✨</>
                 )}
               </button>
             </div>
@@ -351,7 +353,7 @@ const App: React.FC = () => {
           </h1>
           <p className="text-lg text-stone-500 font-bold mt-1">
             {pet.ageMonths} Month Old {pet.breed} • <span className="text-orange-400">{pet.color}</span>
-            {pet.customPhoto && <span className="ml-3 text-[9px] bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase font-black border border-orange-200">Ref Photo Active</span>}
+            {pet.customPhoto && <span className="ml-3 text-[9px] bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase font-black border border-orange-200 shadow-sm">Real Companion Ref</span>}
           </p>
         </div>
 
@@ -359,8 +361,8 @@ const App: React.FC = () => {
           <div className="bg-white px-6 py-4 rounded-[2rem] shadow-xl border-4 border-orange-100 flex items-center gap-5 transform hover:scale-105 transition-transform">
             <div className="text-4xl">🏅</div>
             <div>
-              <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Level</div>
-              <div className="text-3xl font-brand text-orange-500 leading-none">{pet.level}</div>
+              <div className="text-xs uppercase font-black text-stone-400 tracking-tighter">Progression</div>
+              <div className="text-3xl font-brand text-orange-500 leading-none">LVL {pet.level}</div>
             </div>
             <div className="h-12 w-1 bg-stone-100 rounded-full mx-1"></div>
             <div className="flex-1 min-w-[120px]">
@@ -369,7 +371,7 @@ const App: React.FC = () => {
               </div>
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
                 <div 
-                  className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full" 
+                  className="h-full bg-orange-400 transition-all duration-1000 ease-out rounded-full shadow-[0_0_8px_rgba(251,146,60,0.5)]" 
                   style={{ width: `${(pet.xp / XP_PER_LEVEL) * 100}%` }}
                 ></div>
               </div>
@@ -385,7 +387,7 @@ const App: React.FC = () => {
                <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center">
                  <div className="animate-spin text-7xl mb-6">📷</div>
                  <div className="text-orange-600 font-brand text-2xl animate-pulse text-center px-6">
-                    {pet.customPhoto ? "Personalizing AI to your Corgi..." : `Drawing ${pet.name}...`}
+                    {pet.customPhoto ? `Personalizing ${pet.name}...` : `Updating ${pet.name}...`}
                  </div>
                </div>
              )}
@@ -393,15 +395,15 @@ const App: React.FC = () => {
              {showLevelUp && (
                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-orange-500/20 backdrop-blur-md animate-in zoom-in duration-500 pointer-events-none">
                  <div className="text-9xl mb-4 animate-bounce">🎈</div>
-                 <h2 className="text-6xl font-brand text-white drop-shadow-2xl">LEVEL UP!</h2>
-                 <p className="text-white text-2xl font-black mt-4 uppercase tracking-[0.4em]">1 Month Older ✨</p>
+                 <h2 className="text-6xl font-brand text-white drop-shadow-2xl text-center">GROWTH<br/>DETECTED!</h2>
+                 <p className="text-white text-2xl font-black mt-4 uppercase tracking-[0.4em] shadow-lg">1 Month Older ✨</p>
                </div>
              )}
 
              <img 
                src={petImage || `https://picsum.photos/seed/${pet.name}/800/800`} 
                alt={pet.name} 
-               className={`w-full h-full object-cover transition-all duration-700 ${pet.isSleeping ? 'brightness-50 grayscale' : 'group-hover:scale-110'}`}
+               className={`w-full h-full object-cover transition-all duration-700 ${pet.isSleeping ? 'brightness-50 grayscale' : 'group-hover:scale-105'}`}
              />
 
              {pet.isSleeping && (
@@ -410,7 +412,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 border-4 border-orange-50">
-            <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">🩺 Vital Signs</h3>
+            <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">🩺 Electronic Vitals</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               <StatusBar label="Hunger" value={pet.hunger} color="bg-amber-400" icon="🥣" />
               <StatusBar label="Mood" value={pet.happiness} color="bg-pink-400" icon="💖" />
@@ -444,18 +446,18 @@ const App: React.FC = () => {
               } ${isGeneratingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span className="text-4xl">{pet.isSleeping ? '☀️' : '🌙'}</span>
-              <span className="font-brand text-2xl">{pet.isSleeping ? 'Good Morning!' : 'Time for Nap'}</span>
+              <span className="font-brand text-2xl">{pet.isSleeping ? 'Wake Up!' : 'Resting Mode'}</span>
             </button>
           </div>
         </div>
 
         <div className="bg-white rounded-[4rem] shadow-2xl flex flex-col h-[700px] lg:h-[950px] border-8 border-orange-50 overflow-hidden relative">
           <div className="p-8 border-b-4 border-orange-50 bg-orange-50/20 flex items-center gap-6">
-            <div className="w-20 h-20 rounded-3xl bg-orange-300 flex items-center justify-center text-5xl">🐕</div>
+            <div className="w-20 h-20 rounded-3xl bg-orange-300 flex items-center justify-center text-5xl shadow-lg border-2 border-white">🐕</div>
             <div>
-              <h3 className="font-brand text-stone-700 text-3xl mb-2">{pet.name}'s Diary</h3>
+              <h3 className="font-brand text-stone-700 text-3xl mb-1">{pet.name}'s World Log</h3>
               <p className="text-xs text-orange-600 font-black uppercase flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> Live Bark Translator
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> Electronic Bark Signal
               </p>
             </div>
           </div>
@@ -471,7 +473,7 @@ const App: React.FC = () => {
                   <p className="font-bold text-xl leading-relaxed">{msg.text}</p>
                   {msg.translation && (
                     <div className="mt-6 pt-6 border-t-2 border-black/5 text-base italic font-semibold opacity-80 text-stone-600">
-                      <span className="text-[11px] block font-black uppercase tracking-[0.2em] text-orange-400 mb-2">Translation</span>
+                      <span className="text-[11px] block font-black uppercase tracking-[0.2em] text-orange-400 mb-2">Electronic Translation</span>
                       "{msg.translation}"
                     </div>
                   )}
@@ -491,17 +493,17 @@ const App: React.FC = () => {
           </div>
 
           <form onSubmit={handleSendMessage} className="p-8 bg-white border-t-4 border-orange-50">
-            <div className="flex gap-4 items-center bg-stone-50 p-3 rounded-[2.5rem] border-4 border-stone-100 focus-within:border-orange-400 shadow-inner">
+            <div className="flex gap-4 items-center bg-stone-50 p-3 rounded-[2.5rem] border-4 border-stone-100 focus-within:border-orange-400 shadow-inner transition-colors">
               <input 
                 type="text" 
                 value={inputValue} 
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={`Talk to ${pet.name}...`}
+                placeholder={`Speak to ${pet.name}...`}
                 className="flex-1 p-4 bg-transparent border-none focus:outline-none font-bold text-xl text-stone-700"
               />
               <button 
                 type="submit"
-                disabled={isTyping}
+                disabled={isTyping || isGeneratingImage}
                 className="bg-orange-500 text-white w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-bold shadow-2xl hover:scale-105 active:scale-90 transition-all disabled:opacity-50"
               >
                 🐾
@@ -512,25 +514,25 @@ const App: React.FC = () => {
       </main>
 
       <footer className="mt-20 w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-6 pb-20 relative z-10">
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:border-orange-200 transition-colors">
             <span className="block text-4xl mb-2">🎂</span>
-            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Growth</span>
-            <p className="font-brand text-2xl text-stone-700">{pet.ageMonths} Months</p>
+            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Electronic Age</span>
+            <p className="font-brand text-2xl text-stone-700">{pet.ageMonths} Mos</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:border-orange-200 transition-colors">
             <span className="block text-4xl mb-2">🧬</span>
-            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Breed</span>
+            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Genetic Spec</span>
             <p className="font-brand text-2xl text-stone-700">{pet.breed.split(' ')[0]}</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:border-orange-200 transition-colors">
             <span className="block text-4xl mb-2">🏡</span>
-            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Bonded</span>
+            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Bond Duration</span>
             <p className="font-brand text-2xl text-stone-700">{bondedTime}</p>
          </div>
-         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white">
+         <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[2.5rem] text-center shadow-xl border-2 border-white hover:border-orange-200 transition-colors">
             <span className="block text-4xl mb-2">✨</span>
-            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Status</span>
-            <p className="font-brand text-2xl text-green-500">THRIVING</p>
+            <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Link Status</span>
+            <p className="font-brand text-2xl text-green-500">OPTIMAL</p>
          </div>
       </footer>
     </div>
