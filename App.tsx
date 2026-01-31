@@ -7,6 +7,13 @@ import { generateCorgiResponse, generateCorgiImage } from './services/geminiServ
 
 type OnboardingMode = 'none' | 'adopt' | 'upload';
 
+interface VisualEffect {
+  id: number;
+  type: 'heart' | 'sparkle' | 'xp' | 'squeak';
+  x: number;
+  y: number;
+}
+
 const App: React.FC = () => {
   const [pet, setPet] = useState<PetState>(() => {
     const saved = localStorage.getItem('corgi-breeder-v1');
@@ -21,6 +28,8 @@ const App: React.FC = () => {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [effects, setEffects] = useState<VisualEffect[]>([]);
+  const [isSqueaking, setIsSqueaking] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,10 +87,26 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [pet.isAdopted, pet.isSleeping]);
 
+  const addVisualEffect = (type: 'heart' | 'sparkle' | 'xp' | 'squeak') => {
+    const count = type === 'xp' ? 1 : type === 'squeak' ? 3 : 5;
+    for (let i = 0; i < count; i++) {
+      const id = Date.now() + Math.random();
+      const newEffect: VisualEffect = {
+        id,
+        type,
+        x: 30 + Math.random() * 40,
+        y: 20 + Math.random() * 40 
+      };
+      setEffects(prev => [...prev, newEffect]);
+      setTimeout(() => {
+        setEffects(prev => prev.filter(e => e.id !== id));
+      }, 1500);
+    }
+  };
+
   const handleAdopt = async () => {
     if (!pet.name.trim()) return;
     setIsGeneratingImage(true);
-    // Generate the initial image before finalizing adoption to show it immediately
     const firstImg = await generateCorgiImage(pet, 'happily posing for its first day home');
     if (firstImg) setPetImage(firstImg);
     setPet(prev => ({ ...prev, isAdopted: true, adoptedAt: Date.now() }));
@@ -90,6 +115,18 @@ const App: React.FC = () => {
 
   const handleAction = async (activity: Activity) => {
     if (isGeneratingImage || isTyping) return;
+
+    // Unique animation for the Squeaky Chicken
+    if (activity.id === 'toy') {
+      setIsSqueaking(true);
+      addVisualEffect('squeak');
+      setTimeout(() => setIsSqueaking(false), 1000);
+    }
+
+    // Trigger visual effects
+    if (activity.happinessEffect > 0) addVisualEffect('heart');
+    if (activity.xpGain > 0) addVisualEffect('xp');
+    addVisualEffect('sparkle');
 
     const updatedPet = {
       ...pet,
@@ -110,7 +147,13 @@ const App: React.FC = () => {
 
     setPet(updatedPet);
     setIsTyping(true);
-    const aiResp = await generateCorgiResponse(`I just ${activity.name.toLowerCase()} with you!`, updatedPet, []);
+    
+    // Customize prompt for the squeaky toy
+    const promptPrefix = activity.id === 'toy' 
+      ? `I just played with my FAVORITE squeaky chicken toy with you! I am super excited and going crazy!`
+      : `I just ${activity.name.toLowerCase()} with you!`;
+
+    const aiResp = await generateCorgiResponse(promptPrefix, updatedPet, []);
     setIsTyping(false);
 
     setMessages(prev => [...prev, {
@@ -120,8 +163,8 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
-    if (Math.random() > 0.6) {
-      triggerNewImage(activity.name.toLowerCase());
+    if (Math.random() > 0.6 || activity.id === 'toy') {
+      triggerNewImage(activity.id === 'toy' ? 'playing wildly with a squeaky yellow rubber chicken' : activity.name.toLowerCase());
     }
   };
 
@@ -161,6 +204,7 @@ const App: React.FC = () => {
       triggerNewImage('sleeping peacefully in a cozy bed');
     } else {
       triggerNewImage('waking up and stretching');
+      addVisualEffect('sparkle');
     }
   };
 
@@ -382,7 +426,26 @@ const App: React.FC = () => {
 
       <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative z-10">
         <div className="space-y-10">
-          <div className="relative group overflow-hidden rounded-[4rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-[16px] border-white aspect-square flex items-center justify-center">
+          <div className={`relative group overflow-hidden rounded-[4rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-[16px] border-white aspect-square flex items-center justify-center transition-all duration-300 ${isSqueaking ? 'scale-105' : ''}`}>
+             {/* Visual Effects Container */}
+             <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+                {effects.map(effect => (
+                  <div 
+                    key={effect.id}
+                    className={`absolute transition-all duration-1000 ease-out animate-in fade-in slide-in-from-bottom-8 ${effect.type === 'squeak' ? 'text-4xl font-brand text-yellow-500 drop-shadow-lg' : ''}`}
+                    style={{ 
+                      left: `${effect.x}%`, 
+                      top: `${effect.y}%`, 
+                      fontSize: effect.type === 'xp' ? '2.5rem' : effect.type === 'squeak' ? '1.8rem' : '2rem',
+                      opacity: 0,
+                      transform: 'translateY(-120px) rotate(15deg)'
+                    }}
+                  >
+                    {effect.type === 'heart' ? '❤️' : effect.type === 'xp' ? '✨' : effect.type === 'squeak' ? 'SQUEAK!' : '⭐'}
+                  </div>
+                ))}
+             </div>
+
              {isGeneratingImage && (
                <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center">
                  <div className="animate-spin text-7xl mb-6">📷</div>
@@ -403,7 +466,7 @@ const App: React.FC = () => {
              <img 
                src={petImage || `https://picsum.photos/seed/${pet.name}/800/800`} 
                alt={pet.name} 
-               className={`w-full h-full object-cover transition-all duration-700 ${pet.isSleeping ? 'brightness-50 grayscale' : 'group-hover:scale-105'}`}
+               className={`w-full h-full object-cover transition-all duration-700 ${pet.isSleeping ? 'brightness-50 grayscale' : 'group-hover:scale-105'} ${isSqueaking ? 'animate-squeak' : ''}`}
              />
 
              {pet.isSleeping && (
@@ -420,33 +483,33 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {ACTIVITIES.map(act => (
               <button 
                 key={act.id} 
                 onClick={() => handleAction(act)}
                 disabled={pet.isSleeping || isGeneratingImage}
-                className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] bg-white shadow-xl border-b-[12px] border-stone-100 transition-all group ${
+                className={`flex flex-col items-center justify-center p-6 rounded-[2rem] bg-white shadow-xl border-b-8 border-stone-100 transition-all group ${
                   pet.isSleeping || isGeneratingImage
                   ? 'opacity-30 grayscale cursor-not-allowed' 
-                  : 'hover:-translate-y-2 hover:bg-orange-50 active:translate-y-1 active:border-b-4'
+                  : `hover:-translate-y-2 hover:bg-orange-50 active:translate-y-1 active:border-b-2 ${act.id === 'toy' ? 'ring-2 ring-yellow-400/50' : ''}`
                 }`}
               >
-                <span className="text-5xl mb-3 group-hover:scale-125 transition-transform">{act.icon}</span>
-                <span className="text-sm font-black text-stone-600 uppercase tracking-tighter text-center">{act.name}</span>
+                <span className="text-4xl mb-2 group-hover:scale-125 transition-transform">{act.icon}</span>
+                <span className="text-[10px] font-black text-stone-600 uppercase tracking-tighter text-center leading-tight">{act.name}</span>
               </button>
             ))}
             <button 
               onClick={toggleSleep}
               disabled={isGeneratingImage}
-              className={`col-span-2 md:col-span-4 flex items-center justify-center gap-5 p-8 rounded-[3rem] shadow-2xl border-b-[12px] transition-all ${
+              className={`col-span-2 md:col-span-5 flex items-center justify-center gap-5 p-6 rounded-[2.5rem] shadow-xl border-b-8 transition-all ${
                 pet.isSleeping 
-                ? 'bg-indigo-700 text-white border-indigo-900 active:translate-y-1 active:border-b-4' 
-                : 'bg-white text-stone-700 border-stone-100 hover:bg-indigo-50 active:translate-y-1 active:border-b-4'
+                ? 'bg-indigo-700 text-white border-indigo-900 active:translate-y-1 active:border-b-2' 
+                : 'bg-white text-stone-700 border-stone-100 hover:bg-indigo-50 active:translate-y-1 active:border-b-2'
               } ${isGeneratingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span className="text-4xl">{pet.isSleeping ? '☀️' : '🌙'}</span>
-              <span className="font-brand text-2xl">{pet.isSleeping ? 'Wake Up!' : 'Resting Mode'}</span>
+              <span className="text-3xl">{pet.isSleeping ? '☀️' : '🌙'}</span>
+              <span className="font-brand text-xl">{pet.isSleeping ? 'Wake Up!' : 'Resting Mode'}</span>
             </button>
           </div>
         </div>

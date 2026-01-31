@@ -23,6 +23,14 @@
       0%, 100% { transform: rotate(-3deg); }
       50% { transform: rotate(3deg); }
     }
+    /* Squeak jump animation */
+    .animate-squeak {
+      animation: squeak 0.3s ease-in-out 3;
+    }
+    @keyframes squeak {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1) translateY(-20px); }
+    }
     /* Scrollbar hide for chat */
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
