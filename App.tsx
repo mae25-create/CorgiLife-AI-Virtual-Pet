@@ -9,7 +9,7 @@ type OnboardingMode = 'none' | 'adopt' | 'upload';
 
 interface VisualEffect {
   id: number;
-  type: 'heart' | 'sparkle' | 'xp' | 'squeak';
+  type: 'heart' | 'sparkle' | 'xp' | 'squeak' | 'bubble';
   x: number;
   y: number;
 }
@@ -73,6 +73,7 @@ const App: React.FC = () => {
             ...prev,
             energy: newEnergy,
             hunger: Math.max(0, prev.hunger - 0.4),
+            hygiene: Math.max(0, (prev.hygiene || 100) - 0.1),
             isSleeping: newEnergy >= MAX_STAT ? false : true
           };
         }
@@ -81,13 +82,14 @@ const App: React.FC = () => {
           hunger: Math.max(0, prev.hunger - 0.25),
           happiness: Math.max(0, prev.happiness - 0.15),
           energy: Math.max(0, prev.energy - 0.2),
+          hygiene: Math.max(0, (prev.hygiene || 100) - 0.3),
         };
       });
     }, 5000);
     return () => clearInterval(interval);
   }, [pet.isAdopted, pet.isSleeping]);
 
-  const addVisualEffect = (type: 'heart' | 'sparkle' | 'xp' | 'squeak') => {
+  const addVisualEffect = (type: 'heart' | 'sparkle' | 'xp' | 'squeak' | 'bubble') => {
     const count = type === 'xp' ? 1 : type === 'squeak' ? 3 : 5;
     for (let i = 0; i < count; i++) {
       const id = Date.now() + Math.random();
@@ -123,6 +125,11 @@ const App: React.FC = () => {
       setTimeout(() => setIsSqueaking(false), 1000);
     }
 
+    // Unique effect for cleaning
+    if (activity.id === 'clean') {
+      addVisualEffect('bubble');
+    }
+
     // Trigger visual effects
     if (activity.happinessEffect > 0) addVisualEffect('heart');
     if (activity.xpGain > 0) addVisualEffect('xp');
@@ -133,6 +140,7 @@ const App: React.FC = () => {
       hunger: Math.min(MAX_STAT, pet.hunger + activity.hungerEffect),
       happiness: Math.min(MAX_STAT, pet.happiness + activity.happinessEffect),
       energy: Math.max(0, pet.energy + activity.energyEffect),
+      hygiene: Math.min(MAX_STAT, (pet.hygiene || 0) + (activity.hygieneEffect || 0)),
       xp: pet.xp + activity.xpGain
     };
 
@@ -148,10 +156,13 @@ const App: React.FC = () => {
     setPet(updatedPet);
     setIsTyping(true);
     
-    // Customize prompt for the squeaky toy
-    const promptPrefix = activity.id === 'toy' 
-      ? `I just played with my FAVORITE squeaky chicken toy with you! I am super excited and going crazy!`
-      : `I just ${activity.name.toLowerCase()} with you!`;
+    // Customize prompt for special activities
+    let promptPrefix = `I just ${activity.name.toLowerCase()} with you!`;
+    if (activity.id === 'toy') {
+      promptPrefix = `I just played with my FAVORITE squeaky chicken toy with you! I am super excited and going crazy!`;
+    } else if (activity.id === 'clean') {
+      promptPrefix = `I'm having a wonderful bubble bath! Splish splash, I feel so fresh and clean!`;
+    }
 
     const aiResp = await generateCorgiResponse(promptPrefix, updatedPet, []);
     setIsTyping(false);
@@ -163,8 +174,11 @@ const App: React.FC = () => {
       mood: aiResp.mood
     }]);
 
-    if (Math.random() > 0.6 || activity.id === 'toy') {
-      triggerNewImage(activity.id === 'toy' ? 'playing wildly with a squeaky yellow rubber chicken' : activity.name.toLowerCase());
+    if (Math.random() > 0.6 || activity.id === 'toy' || activity.id === 'clean') {
+      let scenario = activity.name.toLowerCase();
+      if (activity.id === 'toy') scenario = 'playing wildly with a squeaky yellow rubber chicken';
+      if (activity.id === 'clean') scenario = 'sitting in a bathtub full of bubbles with a rubber ducky';
+      triggerNewImage(scenario);
     }
   };
 
@@ -436,12 +450,12 @@ const App: React.FC = () => {
                     style={{ 
                       left: `${effect.x}%`, 
                       top: `${effect.y}%`, 
-                      fontSize: effect.type === 'xp' ? '2.5rem' : effect.type === 'squeak' ? '1.8rem' : '2rem',
+                      fontSize: effect.type === 'xp' ? '2.5rem' : effect.type === 'squeak' ? '1.8rem' : effect.type === 'bubble' ? '3rem' : '2rem',
                       opacity: 0,
                       transform: 'translateY(-120px) rotate(15deg)'
                     }}
                   >
-                    {effect.type === 'heart' ? '❤️' : effect.type === 'xp' ? '✨' : effect.type === 'squeak' ? 'SQUEAK!' : '⭐'}
+                    {effect.type === 'heart' ? '❤️' : effect.type === 'xp' ? '✨' : effect.type === 'squeak' ? 'SQUEAK!' : effect.type === 'bubble' ? '🫧' : '⭐'}
                   </div>
                 ))}
              </div>
@@ -476,33 +490,34 @@ const App: React.FC = () => {
 
           <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 border-4 border-orange-50">
             <h3 className="font-brand text-3xl text-stone-700 flex items-center gap-4">🩺 Electronic Vitals</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <StatusBar label="Hunger" value={pet.hunger} color="bg-amber-400" icon="🥣" />
               <StatusBar label="Mood" value={pet.happiness} color="bg-pink-400" icon="💖" />
               <StatusBar label="Energy" value={pet.energy} color="bg-cyan-400" icon="⚡" />
+              <StatusBar label="Hygiene" value={pet.hygiene || 0} color="bg-blue-400" icon="🧼" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
             {ACTIVITIES.map(act => (
               <button 
                 key={act.id} 
                 onClick={() => handleAction(act)}
                 disabled={pet.isSleeping || isGeneratingImage}
-                className={`flex flex-col items-center justify-center p-6 rounded-[2rem] bg-white shadow-xl border-b-8 border-stone-100 transition-all group ${
+                className={`flex flex-col items-center justify-center p-5 rounded-[2rem] bg-white shadow-xl border-b-8 border-stone-100 transition-all group ${
                   pet.isSleeping || isGeneratingImage
                   ? 'opacity-30 grayscale cursor-not-allowed' 
                   : `hover:-translate-y-2 hover:bg-orange-50 active:translate-y-1 active:border-b-2 ${act.id === 'toy' ? 'ring-2 ring-yellow-400/50' : ''}`
                 }`}
               >
-                <span className="text-4xl mb-2 group-hover:scale-125 transition-transform">{act.icon}</span>
-                <span className="text-[10px] font-black text-stone-600 uppercase tracking-tighter text-center leading-tight">{act.name}</span>
+                <span className="text-3xl mb-1 group-hover:scale-125 transition-transform">{act.icon}</span>
+                <span className="text-[9px] font-black text-stone-600 uppercase tracking-tighter text-center leading-tight">{act.name}</span>
               </button>
             ))}
             <button 
               onClick={toggleSleep}
               disabled={isGeneratingImage}
-              className={`col-span-2 md:col-span-5 flex items-center justify-center gap-5 p-6 rounded-[2.5rem] shadow-xl border-b-8 transition-all ${
+              className={`col-span-3 md:col-span-5 flex items-center justify-center gap-5 p-5 rounded-[2.5rem] shadow-xl border-b-8 transition-all ${
                 pet.isSleeping 
                 ? 'bg-indigo-700 text-white border-indigo-900 active:translate-y-1 active:border-b-2' 
                 : 'bg-white text-stone-700 border-stone-100 hover:bg-indigo-50 active:translate-y-1 active:border-b-2'

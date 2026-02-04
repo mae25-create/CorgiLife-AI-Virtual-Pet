@@ -10,6 +10,7 @@ export const INITIAL_STATE: PetState = {
   hunger: 80,
   happiness: 80,
   energy: 100,
+  hygiene: 100, // Initialize hygiene
   level: 1,
   xp: 0,
   lastFed: Date.now(),
@@ -30,6 +31,6 @@ export const ACTIVITIES: Activity[] = [
   { id: 'feed', name: 'Give Treat', icon: '🥣', hungerEffect: 20, happinessEffect: 5, energyEffect: 0, xpGain: 15, description: 'A tasty treat!' },
   { id: 'play', name: 'Fetch Ball', icon: '🎾', hungerEffect: -15, happinessEffect: 25, energyEffect: -20, xpGain: 25, description: 'Play time!' },
   { id: 'walk', name: 'Go for Walk', icon: '🌳', hungerEffect: -10, happinessEffect: 15, energyEffect: -30, xpGain: 35, description: 'Exploring!' },
-  { id: 'belly-rub', name: 'Belly Rub', icon: '🖐️', hungerEffect: 0, happinessEffect: 10, energyEffect: 0, xpGain: 10, description: 'Pure bliss.' },
+  { id: 'clean', name: 'Bubble Bath', icon: '🧼', hungerEffect: 0, happinessEffect: 30, energyEffect: -10, hygieneEffect: 60, xpGain: 20, description: 'Splish splash!' },
   { id: 'toy', name: 'Squeaky Chicken', icon: '🐥', hungerEffect: -5, happinessEffect: 40, energyEffect: -10, xpGain: 40, description: 'THE FAVORITE TOY!' }
 ];
