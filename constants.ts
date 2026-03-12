@@ -27,7 +27,6 @@ export const BREEDS = ['Pembroke Welsh Corgi', 'Cardigan Welsh Corgi', 'Fluffy C
 export const COLORS = ['Red & White', 'Tri-color', 'Sable', 'Brindle', 'Blue Merle', 'Black & Tan'];
 export const MAX_STAT = 100;
 export const XP_PER_LEVEL = 100;
-export const EAT_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/554/554-preview.mp3';
 
 // Available activities and their effects on pet stats
 export const ACTIVITIES: Activity[] = [

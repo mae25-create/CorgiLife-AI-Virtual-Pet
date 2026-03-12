@@ -5,6 +5,15 @@ import { INITIAL_STATE, ACTIVITIES, MAX_STAT, XP_PER_LEVEL, BREEDS, COLORS } fro
 import StatusBar from './components/StatusBar';
 import { generateCorgiResponse, generateCorgiImage, generateCorgiLetter } from './services/geminiService';
 
+declare global {
+  interface Window {
+    aistudio?: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
+
 type OnboardingMode = 'none' | 'adopt' | 'upload';
 
 interface VisualEffect {
@@ -15,6 +24,8 @@ interface VisualEffect {
 }
 
 const App: React.FC = () => {
+  const [isApiKeyReady, setIsApiKeyReady] = useState(false);
+  const [isCheckingKey, setIsCheckingKey] = useState(true);
   const [pet, setPet] = useState<PetState>(() => {
     try {
       const saved = localStorage.getItem('corgi-breeder-v1');
@@ -36,6 +47,7 @@ const App: React.FC = () => {
   const [petImage, setPetImage] = useState<string>('');
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [effects, setEffects] = useState<VisualEffect[]>([]);
   const [isSqueaking, setIsSqueaking] = useState(false);
@@ -43,6 +55,40 @@ const App: React.FC = () => {
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check API Key
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+        try {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          setIsApiKeyReady(hasKey);
+        } catch (e) {
+          console.error("Error checking API key:", e);
+          setIsApiKeyReady(false);
+        }
+      } else {
+        setIsApiKeyReady(true);
+      }
+      setIsCheckingKey(false);
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio && window.aistudio.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        // The key selection might take a moment to propagate to the server environment
+        // We set it to ready and let the next API call try to fetch it
+        setIsApiKeyReady(true);
+      } catch (e: any) {
+        console.error("Error selecting API key:", e);
+        // Even if it fails, we try to proceed as the key might already be there
+        setIsApiKeyReady(true);
+      }
+    }
+  };
 
   // Bonding clock update
   useEffect(() => {
@@ -146,17 +192,20 @@ const App: React.FC = () => {
   const handleAdopt = async () => {
     if (!pet.name.trim()) return;
     setIsGeneratingImage(true);
+    setImageError(null);
     
     // We update the state to "adopted" immediately to ensure the user isn't stuck 
     // waiting for a slow AI image generation if the network/API is slow.
     try {
       const firstImgPromise = generateCorgiImage(pet, 'happily posing for its first day home');
       // Set a timeout or just proceed after setting adopted state
-      firstImgPromise.then(img => {
-        if (img) setPetImage(img);
+      firstImgPromise.then(result => {
+        if (result.image) setPetImage(result.image);
+        if (result.error) setImageError(result.error);
         setIsGeneratingImage(false);
       }).catch(e => {
         console.error("Initial image generation failed:", e);
+        setImageError("Network error");
         setIsGeneratingImage(false);
       });
 
@@ -233,8 +282,14 @@ const App: React.FC = () => {
 
   const triggerNewImage = async (context: string) => {
     setIsGeneratingImage(true);
-    const newImg = await generateCorgiImage(pet, context);
-    if (newImg) setPetImage(newImg);
+    setImageError(null);
+    try {
+      const result = await generateCorgiImage(pet, context);
+      if (result.image) setPetImage(result.image);
+      if (result.error) setImageError(result.error);
+    } catch (e: any) {
+      setImageError(e.message || "Unknown error");
+    }
     setIsGeneratingImage(false);
   };
 
@@ -323,6 +378,41 @@ const App: React.FC = () => {
       window.location.reload();
     }
   };
+
+  if (isCheckingKey) {
+    return <div className="min-h-screen bg-[#fdf6e3] flex items-center justify-center font-brand text-2xl text-orange-500">Loading...</div>;
+  }
+
+  if (!isApiKeyReady) {
+    return (
+      <div className="min-h-screen bg-[#fdf6e3] flex flex-col items-center justify-center p-4 md:p-6 bg-[url('https://www.transparenttextures.com/patterns/paws.png')]">
+        <div className="max-w-xl w-full bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 border-[8px] border-orange-100 text-center animate-in zoom-in duration-500">
+          <div className="text-6xl mb-6 animate-bounce">🔑</div>
+          <h1 className="text-3xl md:text-4xl font-brand text-orange-600 mb-4">API Key Required</h1>
+          <p className="text-stone-600 font-medium mb-6 text-lg">
+            To generate high-quality images of your Corgi, you need to connect a Google Cloud API Key.
+          </p>
+          <div className="bg-orange-50 p-4 rounded-2xl mb-8 text-left border border-orange-100">
+            <p className="text-sm text-orange-800 font-bold mb-2">💡 Tips for success:</p>
+            <ul className="text-xs text-orange-700 space-y-1 list-disc pl-4">
+              <li>Use a key from a project with <strong>Billing Enabled</strong>.</li>
+              <li>Ensure the <strong>Generative Language API</strong> is enabled.</li>
+              <li>If it still fails, try clicking "Retry" in the game.</li>
+            </ul>
+          </div>
+          <p className="text-sm text-stone-500 mb-8 font-bold">
+            Learn more about billing <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-orange-500 underline hover:text-orange-600">here</a>.
+          </p>
+          <button
+            onClick={handleSelectKey}
+            className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-full font-brand text-2xl shadow-xl transition-all active:scale-95 transform hover:-translate-y-1"
+          >
+            Select API Key
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!pet.isAdopted) {
     return (
@@ -671,6 +761,28 @@ const App: React.FC = () => {
                  <div className="animate-spin text-7xl mb-6">📷</div>
                  <div className="text-orange-600 font-brand text-2xl animate-pulse text-center px-6">
                     Updating Electronic Presence...
+                 </div>
+               </div>
+             )}
+
+             {imageError && (
+               <div className="absolute inset-0 z-30 bg-red-500/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                 <div className="text-5xl mb-4">⚠️</div>
+                 <h3 className="text-white font-brand text-2xl mb-2">Image Generation Failed</h3>
+                 <p className="text-red-100 text-sm max-w-xs font-bold mb-6">{imageError}</p>
+                 <div className="flex gap-4">
+                   <button 
+                     onClick={() => setImageError(null)}
+                     className="px-6 py-2 bg-white/20 text-white border-2 border-white rounded-full font-bold shadow-lg hover:bg-white/30 transition-colors"
+                   >
+                     Dismiss
+                   </button>
+                   <button 
+                     onClick={() => triggerNewImage('trying again')}
+                     className="px-6 py-2 bg-white text-red-600 rounded-full font-bold shadow-lg hover:bg-red-50 transition-colors"
+                   >
+                     Retry
+                   </button>
                  </div>
                </div>
              )}

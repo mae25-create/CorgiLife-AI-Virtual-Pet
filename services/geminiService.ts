@@ -3,17 +3,31 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { PetState } from "../types";
 
 // Helper to check if API key is available
-const hasApiKey = () => {
+const fetchApiKey = async () => {
   try {
-    return !!process.env.GEMINI_API_KEY;
+    // Try to get it from the backend
+    // We append a timestamp to avoid browser caching of the API response
+    const response = await fetch(`/api/config?t=${Date.now()}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.apiKey) {
+        return data.apiKey;
+      }
+    }
   } catch (e) {
-    return false;
+    console.error("Failed to fetch API key from backend:", e);
   }
+
+  return null;
 };
 
-const getAI = () => {
-  if (!hasApiKey()) return null;
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const getAI = async () => {
+  const key = await fetchApiKey();
+  if (!key) {
+    console.error("API Key not found in /api/config");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey: key });
 };
 
 /**
@@ -21,7 +35,7 @@ const getAI = () => {
  * Uses gemini-3-flash-preview for text-based reasoning and JSON output.
  */
 export const generateCorgiResponse = async (userInput: string, pet: PetState, history: any[] = []) => {
-  const ai = getAI();
+  const ai = await getAI();
   if (!ai) return { barks: "Woof woof!", translation: "I'm waiting for the electronic link (API Key) to be set up!", mood: "happy" };
 
   const ageDesc = pet.ageMonths < 6 ? "puppy" : pet.ageMonths < 12 ? "young dog" : "adult";
@@ -57,7 +71,7 @@ export const generateCorgiResponse = async (userInput: string, pet: PetState, hi
  * Generates a letter from the Corgi while exploring the animal world.
  */
 export const generateCorgiLetter = async (pet: PetState) => {
-  const ai = getAI();
+  const ai = await getAI();
   if (!ai) return { title: "A letter from the forest", content: "I am having fun! Miss you!" };
 
   const systemInstruction = `You are a ${pet.breed} named ${pet.name}. You are currently exploring a vibrant, modern animal metropolis (similar to Zootopia), interacting with other anthropomorphic animals (like business-suit foxes, barista sloths, police buffalos, pop-star gazelles, etc.). Write a short, cute letter to your owner describing your current city adventure. Return JSON: { "title": "Letter title", "content": "Letter content" }.`;
@@ -90,9 +104,9 @@ export const generateCorgiLetter = async (pet: PetState) => {
 /**
  * Generates a high-quality image of the pet.
  */
-export const generateCorgiImage = async (pet: PetState, scenario: string) => {
-  const ai = getAI();
-  if (!ai) return null;
+export const generateCorgiImage = async (pet: PetState, scenario: string): Promise<{image?: string, error?: string}> => {
+  const ai = await getAI();
+  if (!ai) return { error: "API Key not found" };
 
   const growth = pet.ageMonths < 6 ? "tiny puppy" : pet.ageMonths < 12 ? "young dog" : "full grown dog";
   
@@ -136,13 +150,13 @@ export const generateCorgiImage = async (pet: PetState, scenario: string) => {
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+          return { image: `data:image/png;base64,${part.inlineData.data}` };
         }
       }
     }
-    return null;
-  } catch (e) {
+    return { error: "No image data in response" };
+  } catch (e: any) {
     console.error("AI Image Error:", e);
-    return null;
+    return { error: e.message || "Failed to generate image" };
   }
 };
