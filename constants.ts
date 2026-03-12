@@ -17,6 +17,9 @@ export const INITIAL_STATE: PetState = {
   isSleeping: false,
   adoptedAt: Date.now(),
   isAdopted: false,
+  isExploring: false,
+  exploreStartTime: null,
+  letters: [],
 };
 
 // Configuration constants for the pet simulation
@@ -31,6 +34,6 @@ export const ACTIVITIES: Activity[] = [
   { id: 'feed', name: 'Give Treat', icon: '🥣', hungerEffect: 20, happinessEffect: 5, energyEffect: 0, xpGain: 15, description: 'A tasty treat!' },
   { id: 'play', name: 'Fetch Ball', icon: '🎾', hungerEffect: -15, happinessEffect: 25, energyEffect: -20, xpGain: 25, description: 'Play time!' },
   { id: 'walk', name: 'Go for Walk', icon: '🌳', hungerEffect: -10, happinessEffect: 15, energyEffect: -30, xpGain: 35, description: 'Exploring!' },
-  { id: 'clean', name: 'Bubble Bath', icon: '🧼', hungerEffect: 0, happinessEffect: 30, energyEffect: -10, hygieneEffect: 60, xpGain: 20, description: 'Splish splash!' },
+  { id: 'clean', name: 'Bubble Bath', icon: '🧼', hungerEffect: 0, happinessEffect: 30, energyEffect: 10, hygieneEffect: 60, xpGain: 20, description: 'Splish splash!' },
   { id: 'toy', name: 'Squeaky Chicken', icon: '🐥', hungerEffect: -5, happinessEffect: 40, energyEffect: -10, xpGain: 40, description: 'THE FAVORITE TOY!' }
 ];

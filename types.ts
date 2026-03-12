@@ -1,5 +1,14 @@
 
 // Types for the pet simulation state and messaging
+export interface Letter {
+  id: string;
+  date: number;
+  title: string;
+  content: string;
+  image?: string;
+  isRead: boolean;
+}
+
 export interface PetState {
   name: string;
   breed: string;
@@ -16,6 +25,9 @@ export interface PetState {
   adoptedAt: number;
   isAdopted: boolean;
   customPhoto?: string; // Base64 reference photo
+  isExploring?: boolean;
+  exploreStartTime?: number | null;
+  letters?: Letter[];
 }
 
 export interface CorgiMessage {
